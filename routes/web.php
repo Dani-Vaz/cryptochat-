@@ -11,10 +11,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', function () {
-    return 'CryptoChat OK';
-});
-
+Route::get('/', fn() => auth()->check() ? redirect('/chat') : redirect('/login'));
 /*
 |--------------------------------------------------------------------------
 | Dashboard
