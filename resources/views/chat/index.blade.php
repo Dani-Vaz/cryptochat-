@@ -22,9 +22,9 @@
         </div>
         <div class="flex items-center gap-3">
             <span class="hidden sm:block text-sm text-gray-400">{{ $currentUser->name }}</span>
-            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 grid place-items-center text-white text-xs font-bold">
-                {{ strtoupper(substr($currentUser->name, 0, 2)) }}
-            </div>
+            <a href="{{ route('user-profile.edit') }}" title="Editar perfil" class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 grid place-items-center text-white text-xs font-bold hover:opacity-80 transition">
+    {{ strtoupper(substr($currentUser->name, 0, 2)) }}
+	    </a>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button type="submit" class="text-gray-500 hover:text-rose-400 transition" title="Salir">
