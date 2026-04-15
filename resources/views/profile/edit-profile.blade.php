@@ -30,8 +30,8 @@
             <div class="glass rounded-2xl p-6">
                 <div class="flex items-center gap-4 mb-8">
                     <div class="relative">
-                        @if($currentUser->avatar)
-                            <img src="{{ asset('storage/' . $currentUser->avatar) }}" class="w-20 h-20 rounded-full object-cover border-2 border-cy-400/30">
+                        @if($currentUser->avatar && str_starts_with($currentUser->avatar, 'data:'))
+                            <img src="{{ $currentUser->avatar }}" class="w-20 h-20 rounded-full object-cover border-2 border-cy-400/30">
                         @else
                             <div class="w-20 h-20 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 grid place-items-center text-white text-2xl font-bold">
                                 {{ strtoupper(substr($currentUser->name, 0, 2)) }}
@@ -66,8 +66,11 @@
 
                     <div>
                         <label class="block text-xs text-gray-500 mb-1.5 font-mono uppercase tracking-wider">Foto de perfil</label>
-                        <input type="file" name="avatar" accept="image/*"
+                        <input type="file" name="avatar" accept="image/*" id="avatarInput"
                             class="w-full bg-d-700 text-sm text-gray-400 rounded-xl px-4 py-3 border border-white/5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-cy-400/10 file:text-cy-400 file:text-xs file:font-mono">
+                        <div id="previewContainer" class="mt-3 hidden">
+                            <img id="previewImg" class="w-20 h-20 rounded-full object-cover border-2 border-cy-400/30">
+                        </div>
                         @error('avatar') <p class="text-rose-400 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
 
@@ -80,4 +83,20 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+document.getElementById('avatarInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            document.getElementById('previewImg').src = ev.target.result;
+            document.getElementById('previewContainer').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+@endpush
 @endsection

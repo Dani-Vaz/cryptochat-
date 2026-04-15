@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class UserProfileController extends Controller
 {
@@ -27,11 +26,10 @@ class UserProfileController extends Controller
         $user->bio = $request->bio;
 
         if ($request->hasFile('avatar')) {
-            if ($user->avatar) {
-                Storage::disk('public')->delete($user->avatar);
-            }
-            $path = $request->file('avatar')->store('avatars', 'public');
-            $user->avatar = $path;
+            $file = $request->file('avatar');
+            $imageData = base64_encode(file_get_contents($file->getRealPath()));
+            $mimeType = $file->getMimeType();
+            $user->avatar = "data:{$mimeType};base64,{$imageData}";
         }
 
         $user->save();
