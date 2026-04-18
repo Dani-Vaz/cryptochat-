@@ -21,6 +21,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/contacts', [ChatApiController::class, 'contacts']);
     Route::get('/messages/{contactId}', [ChatApiController::class, 'messages']);
     Route::post('/messages/send', [ChatApiController::class, 'send']);
+    Route::post('/messages/send-media', [ChatApiController::class, 'sendMedia']);
+    Route::delete('/messages/{messageId}', [ChatApiController::class, 'destroy']);
 
     // Bot
     Route::post('/bot/send', [BotApiController::class, 'send']);
