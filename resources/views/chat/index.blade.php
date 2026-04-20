@@ -23,8 +23,8 @@
         <div class="flex items-center gap-3">
             <span class="hidden sm:block text-sm text-gray-400">{{ $currentUser->name }}</span>
             <a href="{{ route('user-profile.edit') }}" title="Editar perfil" class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 grid place-items-center text-white text-xs font-bold hover:opacity-80 transition">
-    {{ strtoupper(substr($currentUser->name, 0, 2)) }}
-	    </a>
+                {{ strtoupper(substr($currentUser->name, 0, 2)) }}
+            </a>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button type="submit" class="text-gray-500 hover:text-rose-400 transition" title="Salir">
@@ -136,7 +136,23 @@
                             <div class="flex {{ $msg->sender_id === $currentUser->id ? 'justify-end' : 'justify-start' }} fade-in">
                                 <div class="max-w-[75%] sm:max-w-[60%]">
                                     <div class="{{ $msg->sender_id === $currentUser->id ? 'msg-out rounded-2xl rounded-br-md' : 'msg-in rounded-2xl rounded-bl-md' }} px-4 py-2.5">
-                                        <p class="text-sm leading-relaxed break-words">{{ $msg->content }}</p>
+                                        {{-- Imagen --}}
+                                        @if(!empty($msg->media_url) && str_starts_with($msg->media_type ?? '', 'image'))
+                                            <img src="{{ $msg->media_url }}"
+                                                 class="rounded-xl max-w-xs max-h-64 object-cover cursor-pointer hover:opacity-90 transition"
+                                                 onclick="window.open('{{ $msg->media_url }}', '_blank')"
+                                                 alt="imagen">
+                                        {{-- Archivo --}}
+                                        @elseif(!empty($msg->media_url))
+                                            <a href="{{ $msg->media_url }}" target="_blank"
+                                               class="flex items-center gap-2 text-sm underline underline-offset-2 hover:opacity-80 transition">
+                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                                {{ basename($msg->media_url) }}
+                                            </a>
+                                        {{-- Texto normal --}}
+                                        @else
+                                            <p class="text-sm leading-relaxed break-words">{{ $msg->content }}</p>
+                                        @endif
                                     </div>
                                     <p class="text-[10px] text-gray-600 mt-0.5 font-mono flex items-center gap-1 {{ $msg->sender_id === $currentUser->id ? 'justify-end' : '' }}">
                                         <svg class="w-2.5 h-2.5 text-cy-400/30" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
@@ -150,16 +166,34 @@
 
                 {{-- Input --}}
                 <div class="bg-d-800/60 backdrop-blur border-t border-white/5 p-3 sm:p-4 flex-shrink-0">
-                    <form id="chatForm" method="POST" action="{{ route('chat.send') }}" class="flex items-end gap-2">
+                    <form id="chatForm" class="flex items-end gap-2">
                         @csrf
                         <input type="hidden" name="receiver_id" value="{{ $selectedContact->id }}">
-                        <textarea name="content" id="msgInput" rows="1" placeholder="Escribe un mensaje cifrado..." required
+
+                        {{-- Botón adjuntar --}}
+                        <label for="fileInput" title="Adjuntar imagen o archivo"
+                            class="flex-shrink-0 cursor-pointer text-gray-500 hover:text-cy-400 transition p-2 rounded-xl hover:bg-d-700">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                            </svg>
+                        </label>
+                        <input type="file" id="fileInput" accept="image/*,video/*,application/pdf,.zip,.rar,.doc,.docx,.xls,.xlsx" class="hidden">
+
+                        <textarea id="msgInput" rows="1" placeholder="Escribe un mensaje cifrado..."
                             class="flex-1 bg-d-700 text-sm text-gray-200 placeholder-gray-600 rounded-xl px-4 py-3 border border-white/5 focus:border-cy-400/30 transition resize-none max-h-28"></textarea>
-                        <button type="submit" class="bg-gradient-to-r from-cy-400 to-cy-500 text-d-900 rounded-xl px-4 sm:px-5 py-3 font-semibold text-sm hover:opacity-90 transition glow flex items-center gap-1.5 flex-shrink-0">
+
+                        <button type="submit" id="btnSend"
+                            class="bg-gradient-to-r from-cy-400 to-cy-500 text-d-900 rounded-xl px-4 sm:px-5 py-3 font-semibold text-sm hover:opacity-90 transition glow flex items-center gap-1.5 flex-shrink-0">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                            <span class="hidden sm:inline">Enviar</span>
+                            <span class="hidden sm:inline" id="btnSendText">Enviar</span>
                         </button>
                     </form>
+
+                    {{-- Preview del archivo seleccionado --}}
+                    <div id="filePreview" class="hidden mt-2 flex items-center gap-2 bg-d-700 rounded-xl px-3 py-2">
+                        <span id="filePreviewText" class="text-xs text-gray-400 flex-1 truncate font-mono"></span>
+                        <button id="fileCancelBtn" class="text-gray-600 hover:text-rose-400 transition text-xs">✕ Cancelar</button>
+                    </div>
                 </div>
 
             @else
@@ -183,30 +217,119 @@
 
 @push('scripts')
 <script>
-const sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
-document.getElementById('menuBtn')?.addEventListener('click',()=>{
-    sb.classList.toggle('hidden');sb.classList.toggle('fixed');sb.classList.toggle('inset-y-0');
-    sb.classList.toggle('left-0');sb.classList.toggle('z-50');ov.classList.toggle('hidden');
+// ── Sidebar móvil ──
+const sb = document.getElementById('sidebar'), ov = document.getElementById('overlay');
+document.getElementById('menuBtn')?.addEventListener('click', () => {
+    sb.classList.toggle('hidden'); sb.classList.toggle('fixed');
+    sb.classList.toggle('inset-y-0'); sb.classList.toggle('left-0');
+    sb.classList.toggle('z-50'); ov.classList.toggle('hidden');
 });
-ov?.addEventListener('click',()=>{sb.classList.add('hidden');sb.classList.remove('fixed','inset-y-0','left-0','z-50');ov.classList.add('hidden')});
+ov?.addEventListener('click', () => {
+    sb.classList.add('hidden');
+    sb.classList.remove('fixed', 'inset-y-0', 'left-0', 'z-50');
+    ov.classList.add('hidden');
+});
 
-const mb=document.getElementById('msgBox');
-if(mb) mb.scrollTop=mb.scrollHeight;
+// ── Scroll al fondo ──
+const mb = document.getElementById('msgBox');
+if (mb) mb.scrollTop = mb.scrollHeight;
 
-const ta=document.getElementById('msgInput');
-if(ta){
-    ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,112)+'px'});
-    ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(this.value.trim())document.getElementById('chatForm').submit()}});
+// ── Auto-resize textarea ──
+const ta = document.getElementById('msgInput');
+if (ta) {
+    ta.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 112) + 'px';
+    });
+    ta.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (this.value.trim()) sendText();
+        }
+    });
 }
 
-document.getElementById('searchBox')?.addEventListener('input',function(){
-    const q=this.value.toLowerCase();
-    document.querySelectorAll('.c-item').forEach(el=>{el.style.display=el.textContent.toLowerCase().includes(q)?'':'none'});
+// ── Buscador de contactos ──
+document.getElementById('searchBox')?.addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.c-item').forEach(el => {
+        el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
 });
 
+// ── Envío de texto ──
+function sendText() {
+    const content = ta.value.trim();
+    if (!content) return;
+    ta.value = ''; ta.style.height = 'auto';
+    setBtnLoading(true);
+    fetch('{{ route("chat.send") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ receiver_id: {{ $selectedContact->id ?? 0 }}, content })
+    }).finally(() => { setBtnLoading(false); location.reload(); });
+}
+
+document.getElementById('chatForm')?.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (selectedFile) sendMedia();
+    else sendText();
+});
+
+// ── Adjuntar archivo ──
+let selectedFile = null;
+
+document.getElementById('fileInput')?.addEventListener('change', function () {
+    selectedFile = this.files[0];
+    if (selectedFile) {
+        document.getElementById('filePreview').classList.remove('hidden');
+        document.getElementById('filePreviewText').textContent = '📎 ' + selectedFile.name;
+    }
+});
+
+document.getElementById('fileCancelBtn')?.addEventListener('click', function () {
+    selectedFile = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('filePreview').classList.add('hidden');
+});
+
+function sendMedia() {
+    const fd = new FormData();
+    fd.append('receiver_id', '{{ $selectedContact->id ?? 0 }}');
+    fd.append('media', selectedFile);
+    setBtnLoading(true);
+    fetch('/api/messages/send-media', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: fd
+    }).finally(() => { setBtnLoading(false); location.reload(); });
+}
+
+function setBtnLoading(loading) {
+    const btn = document.getElementById('btnSend');
+    const txt = document.getElementById('btnSendText');
+    if (!btn) return;
+    btn.disabled = loading;
+    if (txt) txt.textContent = loading ? '...' : 'Enviar';
+}
+
+// ── Polling nuevos mensajes ──
 @if($selectedContact)
-let cnt={{$messages->count()}};
-setInterval(async()=>{try{const r=await fetch('{{route("chat.messages",$selectedContact->id)}}');const d=await r.json();if(d.length>cnt)location.reload()}catch(e){}},3000);
+let cnt = {{ $messages->count() }};
+setInterval(async () => {
+    try {
+        const r = await fetch('{{ route("chat.messages", $selectedContact->id) }}');
+        const d = await r.json();
+        if (d.length > cnt) location.reload();
+    } catch(e) {}
+}, 3000);
 @endif
 </script>
 @endpush
