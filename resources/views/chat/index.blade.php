@@ -271,8 +271,7 @@ function sendText() {
             receiver_id: document.getElementById('receiverId').value,
             content
         })
-    }).finally(() => { setBtnLoading(false); location.reload(); });
-}
+}).then(r => r.text()).then(t => { setBtnLoading(false); console.log('RESPUESTA:', t); }).catch(e => { setBtnLoading(false); console.log('ERROR:', e); });}
 
 // ── Submit del form ──
 document.getElementById('chatForm')?.addEventListener('submit', function (e) {
