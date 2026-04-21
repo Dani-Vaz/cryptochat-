@@ -136,20 +136,17 @@
                             <div class="flex {{ $msg->sender_id === $currentUser->id ? 'justify-end' : 'justify-start' }} fade-in">
                                 <div class="max-w-[75%] sm:max-w-[60%]">
                                     <div class="{{ $msg->sender_id === $currentUser->id ? 'msg-out rounded-2xl rounded-br-md' : 'msg-in rounded-2xl rounded-bl-md' }} px-4 py-2.5">
-                                        {{-- Imagen --}}
                                         @if(!empty($msg->media_url) && str_starts_with($msg->media_type ?? '', 'image'))
                                             <img src="{{ $msg->media_url }}"
                                                  class="rounded-xl max-w-xs max-h-64 object-cover cursor-pointer hover:opacity-90 transition"
                                                  onclick="window.open('{{ $msg->media_url }}', '_blank')"
                                                  alt="imagen">
-                                        {{-- Archivo --}}
                                         @elseif(!empty($msg->media_url))
                                             <a href="{{ $msg->media_url }}" target="_blank"
                                                class="flex items-center gap-2 text-sm underline underline-offset-2 hover:opacity-80 transition">
                                                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                                                 {{ basename($msg->media_url) }}
                                             </a>
-                                        {{-- Texto normal --}}
                                         @else
                                             <p class="text-sm leading-relaxed break-words">{{ $msg->content }}</p>
                                         @endif
@@ -167,8 +164,7 @@
                 {{-- Input --}}
                 <div class="bg-d-800/60 backdrop-blur border-t border-white/5 p-3 sm:p-4 flex-shrink-0">
                     <form id="chatForm" class="flex items-end gap-2">
-                        @csrf
-                        <input type="hidden" name="receiver_id" value="{{ $selectedContact->id }}">
+                        <input type="hidden" id="receiverId" value="{{ $selectedContact->id }}">
 
                         {{-- Botón adjuntar --}}
                         <label for="fileInput" title="Adjuntar imagen o archivo"
@@ -192,7 +188,7 @@
                     {{-- Preview del archivo seleccionado --}}
                     <div id="filePreview" class="hidden mt-2 flex items-center gap-2 bg-d-700 rounded-xl px-3 py-2">
                         <span id="filePreviewText" class="text-xs text-gray-400 flex-1 truncate font-mono"></span>
-                        <button id="fileCancelBtn" class="text-gray-600 hover:text-rose-400 transition text-xs">✕ Cancelar</button>
+                        <button id="fileCancelBtn" type="button" class="text-gray-600 hover:text-rose-400 transition text-xs">✕ Cancelar</button>
                     </div>
                 </div>
 
@@ -244,7 +240,8 @@ if (ta) {
     ta.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (this.value.trim()) sendText();
+            if (selectedFile) sendMedia();
+            else if (this.value.trim()) sendText();
         }
     });
 }
@@ -270,10 +267,14 @@ function sendText() {
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
             'Accept': 'application/json'
         },
-        body: JSON.stringify({ receiver_id: {{ $selectedContact->id ?? 0 }}, content })
+        body: JSON.stringify({
+            receiver_id: document.getElementById('receiverId').value,
+            content
+        })
     }).finally(() => { setBtnLoading(false); location.reload(); });
 }
 
+// ── Submit del form ──
 document.getElementById('chatForm')?.addEventListener('submit', function (e) {
     e.preventDefault();
     if (selectedFile) sendMedia();
@@ -297,17 +298,15 @@ document.getElementById('fileCancelBtn')?.addEventListener('click', function () 
     document.getElementById('filePreview').classList.add('hidden');
 });
 
+// ── Envío de media via ruta web ──
 function sendMedia() {
     const fd = new FormData();
-    fd.append('receiver_id', '{{ $selectedContact->id ?? 0 }}');
+    fd.append('receiver_id', document.getElementById('receiverId').value);
     fd.append('media', selectedFile);
+    fd.append('_token', '{{ csrf_token() }}');
     setBtnLoading(true);
-    fetch('/api/messages/send-media', {
+    fetch('{{ route("chat.send-media") }}', {
         method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
         body: fd
     }).finally(() => { setBtnLoading(false); location.reload(); });
 }
