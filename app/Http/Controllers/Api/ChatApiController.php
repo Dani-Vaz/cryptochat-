@@ -64,28 +64,34 @@ class ChatApiController extends Controller
     }
 
     public function sendMedia(Request $request)
-    {
-        $request->validate([
-            'receiver_id' => 'required|exists:users,id',
-            'media'       => 'required|file|max:20480',
-        ]);
+{
+    $request->validate([
+        'receiver_id' => 'required|exists:users,id',
+        'media'       => 'required|file|max:20480',
+    ]);
 
-        $file     = $request->file('media');
-        $mimeType = $file->getMimeType();
-        $path     = $file->store('chat-media', 'public');
-        $url      = Storage::url($path);
+    $file     = $request->file('media');
+    $mimeType = $file->getMimeType();
 
-        $message = Message::create([
-            'sender_id'   => Auth::id(),
-            'receiver_id' => $request->receiver_id,
-            'content'     => null,
-            'media_path'  => $path,
-            'media_type'  => $mimeType,
-            'media_url'   => $url,
-        ]);
+    // Subir a Cloudinary
+    $uploaded = cloudinary()->upload($file->getRealPath(), [
+        'folder' => 'cryptochat',
+    ]);
 
-        return response()->json($this->formatMessage($message), 201);
-    }
+    $url  = $uploaded->getSecurePath();
+    $path = $uploaded->getPublicId();
+
+    $message = Message::create([
+        'sender_id'   => Auth::id(),
+        'receiver_id' => $request->receiver_id,
+        'content'     => null,
+        'media_path'  => $path,
+        'media_type'  => $mimeType,
+        'media_url'   => $url,
+    ]);
+
+    return response()->json($this->formatMessage($message), 201);
+}
 
     public function destroy(int $messageId)
     {
