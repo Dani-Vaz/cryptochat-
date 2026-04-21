@@ -45,33 +45,40 @@ class ChatController extends Controller
     }
 
     public function sendMedia(Request $request)
-    {
-        $request->validate([
-            'receiver_id' => 'required|exists:users,id',
-            'media'       => 'required|file|max:20480',
-        ]);
+{
+    $request->validate([
+        'receiver_id' => 'required|exists:users,id',
+        'media'       => 'required|file|max:10240',
+    ]);
 
-        $file     = $request->file('media');
-        $mimeType = $file->getMimeType();
+    $file     = $request->file('media');
+    $mimeType = $file->getMimeType();
 
+    try {
         $uploaded = cloudinary()->upload($file->getRealPath(), [
-            'folder' => 'cryptochat',
+            'folder'         => 'cryptochat',
+            'resource_type'  => 'auto',
+            'timeout'        => 30,
         ]);
 
         $url  = $uploaded->getSecurePath();
         $path = $uploaded->getPublicId();
 
-        Message::create([
-            'sender_id'   => Auth::id(),
-            'receiver_id' => $request->receiver_id,
-            'content'     => null,
-            'media_path'  => $path,
-            'media_type'  => $mimeType,
-            'media_url'   => $url,
-        ]);
-
-        return response()->json(['ok' => true]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
     }
+
+    Message::create([
+        'sender_id'   => Auth::id(),
+        'receiver_id' => $request->receiver_id,
+        'content'     => null,
+        'media_path'  => $path,
+        'media_type'  => $mimeType,
+        'media_url'   => $url,
+    ]);
+
+    return response()->json(['ok' => true]);
+}}
 
     public function getMessages(int $contactId)
     {
