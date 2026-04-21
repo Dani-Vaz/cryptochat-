@@ -45,40 +45,39 @@ class ChatController extends Controller
     }
 
     public function sendMedia(Request $request)
-{
-    $request->validate([
-        'receiver_id' => 'required|exists:users,id',
-        'media'       => 'required|file|max:10240',
-    ]);
-
-    $file     = $request->file('media');
-    $mimeType = $file->getMimeType();
-
-    try {
-        $uploaded = cloudinary()->upload($file->getRealPath(), [
-            'folder'         => 'cryptochat',
-            'resource_type'  => 'auto',
-            'timeout'        => 30,
+    {
+        $request->validate([
+            'receiver_id' => 'required|exists:users,id',
+            'media'       => 'required|file|max:10240',
         ]);
 
-        $url  = $uploaded->getSecurePath();
-        $path = $uploaded->getPublicId();
+        $file     = $request->file('media');
+        $mimeType = $file->getMimeType();
 
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
+        try {
+            $uploaded = cloudinary()->upload($file->getRealPath(), [
+                'folder'        => 'cryptochat',
+                'resource_type' => 'auto',
+            ]);
+
+            $url  = $uploaded->getSecurePath();
+            $path = $uploaded->getPublicId();
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+        Message::create([
+            'sender_id'   => Auth::id(),
+            'receiver_id' => $request->receiver_id,
+            'content'     => null,
+            'media_path'  => $path,
+            'media_type'  => $mimeType,
+            'media_url'   => $url,
+        ]);
+
+        return response()->json(['ok' => true]);
     }
-
-    Message::create([
-        'sender_id'   => Auth::id(),
-        'receiver_id' => $request->receiver_id,
-        'content'     => null,
-        'media_path'  => $path,
-        'media_type'  => $mimeType,
-        'media_url'   => $url,
-    ]);
-
-    return response()->json(['ok' => true]);
-}}
 
     public function getMessages(int $contactId)
     {
