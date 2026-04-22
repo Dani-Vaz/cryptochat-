@@ -7,7 +7,6 @@ use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class ChatApiController extends Controller
 {
@@ -63,45 +62,33 @@ class ChatApiController extends Controller
         return response()->json($this->formatMessage($message), 201);
     }
 
+    // Accepts JSON with media_url already uploaded to Cloudinary
     public function sendMedia(Request $request)
-{
-    $request->validate([
-        'receiver_id' => 'required|exists:users,id',
-        'media'       => 'required|file|max:20480',
-    ]);
+    {
+        $request->validate([
+            'receiver_id' => 'required|exists:users,id',
+            'media_url'   => 'required|string',
+            'media_type'  => 'required|string',
+            'media_path'  => 'nullable|string',
+        ]);
 
-    $file     = $request->file('media');
-    $mimeType = $file->getMimeType();
+        $message = Message::create([
+            'sender_id'   => Auth::id(),
+            'receiver_id' => $request->receiver_id,
+            'content'     => null,
+            'media_path'  => $request->media_path,
+            'media_type'  => $request->media_type,
+            'media_url'   => $request->media_url,
+        ]);
 
-    // Subir a Cloudinary
-    $uploaded = cloudinary()->upload($file->getRealPath(), [
-        'folder' => 'cryptochat',
-    ]);
-
-    $url  = $uploaded->getSecurePath();
-    $path = $uploaded->getPublicId();
-
-    $message = Message::create([
-        'sender_id'   => Auth::id(),
-        'receiver_id' => $request->receiver_id,
-        'content'     => null,
-        'media_path'  => $path,
-        'media_type'  => $mimeType,
-        'media_url'   => $url,
-    ]);
-
-    return response()->json($this->formatMessage($message), 201);
-}
+        return response()->json($this->formatMessage($message), 201);
+    }
 
     public function destroy(int $messageId)
     {
         $message = Message::where('id', $messageId)
             ->where('sender_id', Auth::id())
             ->firstOrFail();
-
-        if ($message->media_path) {
-            Storage::disk('public')->delete($message->media_path);
-        }
 
         $message->delete();
 
