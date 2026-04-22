@@ -44,46 +44,23 @@ class ChatController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    // Recibe la URL ya subida desde Cloudinary en el browser
     public function sendMedia(Request $request)
     {
         $request->validate([
             'receiver_id' => 'required|exists:users,id',
-            'media'       => 'required|file|max:10240',
+            'media_url'   => 'required|string',
+            'media_type'  => 'required|string',
+            'media_path'  => 'nullable|string',
         ]);
-
-        $file     = $request->file('media');
-        $mimeType = $file->getMimeType();
-
-        try {
-            \Cloudinary\Configuration\Configuration::instance([
-                'cloud' => [
-                    'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
-                    'api_key'    => env('CLOUDINARY_API_KEY'),
-                    'api_secret' => env('CLOUDINARY_API_SECRET'),
-                ],
-                'url' => ['secure' => true]
-            ]);
-
-            $cloudinary = new \Cloudinary\Cloudinary();
-            $result = $cloudinary->uploadApi()->upload($file->getRealPath(), [
-                'folder'        => 'cryptochat',
-                'resource_type' => 'auto',
-            ]);
-
-            $url  = $result['secure_url'];
-            $path = $result['public_id'];
-
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
 
         Message::create([
             'sender_id'   => Auth::id(),
             'receiver_id' => $request->receiver_id,
             'content'     => null,
-            'media_path'  => $path,
-            'media_type'  => $mimeType,
-            'media_url'   => $url,
+            'media_path'  => $request->media_path,
+            'media_type'  => $request->media_type,
+            'media_url'   => $request->media_url,
         ]);
 
         return response()->json(['ok' => true]);

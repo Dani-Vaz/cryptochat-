@@ -213,6 +213,10 @@
 
 @push('scripts')
 <script>
+// Cloudinary config
+const CLOUDINARY_CLOUD = 'dnvo9mdwn';
+const CLOUDINARY_PRESET = 'ml_default2';
+
 // ── Sidebar móvil ──
 const sb = document.getElementById('sidebar'), ov = document.getElementById('overlay');
 document.getElementById('menuBtn')?.addEventListener('click', () => {
@@ -298,26 +302,60 @@ document.getElementById('fileCancelBtn')?.addEventListener('click', function () 
     document.getElementById('filePreview').classList.add('hidden');
 });
 
-// ── Envío de media via ruta web ──
-function sendMedia() {
-    const fd = new FormData();
-    fd.append('receiver_id', document.getElementById('receiverId').value);
-    fd.append('media', selectedFile);
-    fd.append('_token', '{{ csrf_token() }}');
+// ── Envío de media: sube directo a Cloudinary desde el browser ──
+async function sendMedia() {
+    if (!selectedFile) return;
     setBtnLoading(true);
-    fetch('{{ route("chat.send-media") }}', {
-        method: 'POST',
-        body: fd
-    }).then(r => r.text()).then(t => {
-        setBtnLoading(false);
-        console.log('RESPUESTA:', t);
-        if (t.includes('"ok":true')) {
+
+    try {
+        // 1. Subir a Cloudinary directamente desde el browser
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('upload_preset', CLOUDINARY_PRESET);
+
+        const cloudRes = await fetch(
+            `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`,
+            { method: 'POST', body: formData }
+        );
+        const cloudData = await cloudRes.json();
+
+        if (!cloudData.secure_url) {
+            console.error('Cloudinary error:', cloudData);
+            setBtnLoading(false);
+            return;
+        }
+
+        // 2. Guardar la URL en la base de datos via Laravel
+        const saveRes = await fetch('{{ route("chat.send-media") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                receiver_id: document.getElementById('receiverId').value,
+                media_url:   cloudData.secure_url,
+                media_type:  selectedFile.type,
+                media_path:  cloudData.public_id,
+            })
+        });
+
+        const saveData = await saveRes.json();
+        if (saveData.ok) {
             selectedFile = null;
             document.getElementById('fileInput').value = '';
             document.getElementById('filePreview').classList.add('hidden');
             location.reload();
+        } else {
+            console.error('Save error:', saveData);
         }
-    }).catch(e => { setBtnLoading(false); console.log('ERROR:', e); });
+
+    } catch (e) {
+        console.error('Error:', e);
+    }
+
+    setBtnLoading(false);
 }
 
 function setBtnLoading(loading) {
