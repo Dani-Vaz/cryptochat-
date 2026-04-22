@@ -55,13 +55,23 @@ class ChatController extends Controller
         $mimeType = $file->getMimeType();
 
         try {
-            $uploaded = cloudinary()->upload($file->getRealPath(), [
+            \Cloudinary\Configuration\Configuration::instance([
+                'cloud' => [
+                    'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                    'api_key'    => env('CLOUDINARY_API_KEY'),
+                    'api_secret' => env('CLOUDINARY_API_SECRET'),
+                ],
+                'url' => ['secure' => true]
+            ]);
+
+            $cloudinary = new \Cloudinary\Cloudinary();
+            $result = $cloudinary->uploadApi()->upload($file->getRealPath(), [
                 'folder'        => 'cryptochat',
                 'resource_type' => 'auto',
             ]);
 
-            $url  = $uploaded->getSecurePath();
-            $path = $uploaded->getPublicId();
+            $url  = $result['secure_url'];
+            $path = $result['public_id'];
 
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
