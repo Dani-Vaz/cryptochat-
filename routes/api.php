@@ -6,31 +6,26 @@ use App\Http\Controllers\Api\BotApiController;
 use App\Http\Controllers\Api\ProfileApiController;
 use Illuminate\Support\Facades\Route;
 
-// ─── Rutas Públicas (sin auth) ───
+// Rutas públicas
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 
-// ─── Rutas Protegidas (requieren token) ───
+// Rutas protegidas
 Route::middleware('auth:sanctum')->group(function () {
-    // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
-
-    // Chat
     Route::get('/contacts', [ChatApiController::class, 'contacts']);
     Route::get('/messages/{contactId}', [ChatApiController::class, 'messages']);
     Route::post('/messages/send', [ChatApiController::class, 'send']);
     Route::post('/messages/send-media', [ChatApiController::class, 'sendMedia']);
     Route::delete('/messages/{messageId}', [ChatApiController::class, 'destroy']);
-
-    // Bot
     Route::post('/bot/send', [BotApiController::class, 'send']);
-
-    // Profile
     Route::get('/profile', [ProfileApiController::class, 'show']);
     Route::post('/profile/update', [ProfileApiController::class, 'update']);
 
+    // Ruta de prueba (opcional)
     Route::get('/ping', function () {
-    	return response()->json(['message' => 'pong']);	
-});
+        return response()->json(['message' => 'pong']);
+    });
+}); // <-- Este cierre es importante
