@@ -30,4 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Profile
     Route::get('/profile', [ProfileApiController::class, 'show']);
     Route::post('/profile/update', [ProfileApiController::class, 'update']);
+
+    Route::get('/ping', function () {
+    	return response()->json(['message' => 'pong']);	
 });
